@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "lang": "ar",
+    "rtl": true
+  },
+  "ui.run": "تشغيل",
+  "ui.hint": "تلميح",
+  "ui.pass": "نجاح",
+  "ui.fail": "فشل",
+  "ui.stdout": "المخرجات",
+  "ui.stderr": "الأخطاء",
+  "puzzle.L1-P3.title": "موجه الأمان: هل لديك صلاحية؟",
+  "puzzle.L1-P3.intro": "استخدم if/else. إذا كان access == 'y' فافتح الباب.",
+  "puzzle.L2-P3.title": "تجاوز العقد الفخ",
+  "puzzle.L2-P3.intro": "اكتب دالة safe_nodes(traps) تُرجع قائمة العقد من 1..10 مع استثناء العقد الموجودة في traps.",
+  "puzzle.L3-P1.title": "عرّف أول دالة لك",
+  "puzzle.L3-P1.intro": "اكتب دالة disable_drone() التي تطبع: EMP blast triggered. Drone disabled.",
+  "hint.if_else": "استخدم if/else للتفرع حسب قيمة access.",
+  "hint.missing_colon": "تذكر وضع النقطتين ':' بعد if/def/for.",
+  "hint.for_loop": "كرر على range(1, 11) وتجاوز العقد الفخ.",
+  "hint.list_comprehension": "جرّب [n for n in range(1, 11) if n not in traps].",
+  "hint.def_function": "عرّف الدالة هكذا: def disable_drone():",
+  "hint.print_inside": "استخدم print() داخل الدالة.",
+  "hint.call_function": "لا تنس استدعاء الدالة في النهاية.",
+  "fmt.door_unlocked": "تم فتح الباب {id}",
+  "fmt.nodes_enabled": "تم تفعيل العقد الآمنة وتجاوز الفخاخ",
+  "fmt.drone_disabled": "تم تعطيل الطائرة {id} بواسطة نبضة كهرومغناطيسية"
+}

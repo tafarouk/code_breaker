@@ -1,0 +1,35 @@
+{
+  "id": "L1-P3-door-unlock",
+  "title_key": "puzzle.L1-P3.title",
+  "intro_key": "puzzle.L1-P3.intro",
+  "starter_code": "access = \"y\"  # try changing this to 'n'\n# Write an if/else that prints exactly: Door unlocked OR Access denied\n",
+  "hints_keys": [
+    "hint.if_else",
+    "hint.missing_colon"
+  ],
+  "goals": [
+    {
+      "type": "stdout_includes",
+      "value": "Door unlocked"
+    },
+    {
+      "type": "forbidden_tokens",
+      "value": [
+        "import",
+        "__",
+        "open",
+        "exec",
+        "eval"
+      ]
+    }
+  ],
+  "world_actions_on_pass": [
+    {
+      "type": "open_door",
+      "params": {
+        "id": "D-01"
+      },
+      "message_key": "fmt.door_unlocked"
+    }
+  ]
+}

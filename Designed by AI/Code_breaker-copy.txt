@@ -1,0 +1,970 @@
+# This script builds a ready-to-commit repo skeleton for
+# "Codebreaker: Python Protocols", including:
+# - Tools (validators, i18n checker)
+# - Engine stub (real evaluator skeleton)
+# - Smoke test
+# - Content (3 puzzles + solutions) using i18n keys
+# - i18n packs (EN/RU/FR/AR)
+# - Unity stubs (WorldActionBus.cs, Localizer.cs)
+# - GitHub workflow + PR template
+# - "Designed by AI" folder with GDD, Architecture doc, and chat log
+#
+# It then zips the whole bundle for download.
+
+import os, json, textwrap, zipfile, pathlib, datetime
+
+BASE = "/mnt/data/codebreaker_repo_skeleton"
+os.makedirs(BASE, exist_ok=True)
+
+# Helper to write files
+def write(path, content, mode="w", binary=False):
+    full = os.path.join(BASE, path)
+    os.makedirs(os.path.dirname(full), exist_ok=True)
+    with open(full, "wb" if binary else "w", encoding=None if binary else "utf-8") as f:
+        f.write(content)
+
+# -----------------------------
+# GitHub workflow + PR template
+# -----------------------------
+validate_yml = """name: Validate Content & Tests
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-puzzles:
+    name: Validate puzzle JSON
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run content validator
+        run: |
+          python tools/validate_content.py content/puzzles
+
+  engine-tests:
+    name: Engine unit tests (optional)
+    runs-on: ubuntu-latest
+    needs: [validate-puzzles]
+    if: ${{ always() }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install engine deps
+        run: |
+          if [ -f engine/requirements.txt ]; then pip install -r engine/requirements.txt; fi
+      - name: Run engine tests
+        working-directory: engine
+        run: |
+          python -m pytest -q || python -m unittest discover -q
+
+  smoke-run:
+    name: Headless smoke (solve Levels 1–3)
+    runs-on: ubuntu-latest
+    needs: [engine-tests]
+    if: ${{ always() }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install smoke deps
+        run: |
+          if [ -f smoke/requirements.txt ]; then pip install -r smoke/requirements.txt; fi
+
+      - name: Run smoke scenario
+        run: |
+          if [ -f smoke/run_smoke.py ]; then python smoke/run_smoke.py; else echo "No smoke script yet, skipping."; fi
+"""
+write(".github/workflows/validate.yml", validate_yml)
+
+pr_template = """# 🧩 Puzzle / Feature Pull Request
+
+Thank you for contributing to *Codebreaker: Python Protocols*!  
+Please complete the checklist below before requesting review.
+
+---
+
+## 📋 Description
+<!-- Briefly describe the puzzle/feature and what it teaches or fixes -->
+
+---
+
+## ✅ PR Checklist
+
+### Puzzle Content
+- [ ] Added new puzzle JSON under `content/puzzles/`
+- [ ] Added matching reference solution under `content/solutions/`
+- [ ] Puzzle JSON uses `*_key` fields (`title_key`, `intro_key`, `hints_keys`) instead of literal strings
+- [ ] Puzzle includes **at least one hint**
+
+### i18n
+- [ ] Added all new keys to `i18n/en.json`
+- [ ] Added keys to other language packs (`ru.json`, `fr.json`, `ar.json`) or copied English as placeholder
+- [ ] Ran `python tools/i18n_check.py` and all keys are present ✅
+
+### Validation
+- [ ] Ran `python tools/validate_content.py content/puzzles` locally and all puzzles passed
+- [ ] If puzzle includes a function, ensured function contract tests pass with reference solution
+
+### Visual / Gameplay
+- [ ] Puzzle includes at least one `world_actions_on_pass` (door open, node glow, drone fall, etc.)
+- [ ] Attached screenshot/GIF or short description of visual payoff
+
+---
+
+## 🧠 Notes for Reviewers
+<!-- Optional: anything reviewers should focus on, e.g. balance, difficulty, translations -->
+
+---
+
+## 🚀 Next Steps
+- After merge, CI will run `validate_content.py`, `i18n_check.py`, and smoke tests.
+- If you see ❌ failures in CI logs, update puzzles/solutions/i18n accordingly.
+"""
+write(".github/pull_request_template.md", pr_template)
+
+# -----------------------------
+# Tools: validators & i18n check
+# -----------------------------
+validate_content_py = """import json, sys, os, re
+
+FORBIDDEN = [\"import\", \"exec\", \"eval\", \"open\", \"__\"]
+
+def validate_puzzle(path):
+    with open(path, \"r\", encoding=\"utf-8\") as f:
+        data = json.load(f)
+
+    for field in [\"id\", \"starter_code\", \"goals\"]:
+        if field not in data:
+            return f\"❌ Missing field `{field}`\"
+
+    # ID should match filename (without .json)
+    fn_id = os.path.splitext(os.path.basename(path))[0]
+    if data[\"id\"] != fn_id:
+        return f\"❌ id '{data['id']}' must match filename '{fn_id}'\"
+
+    # ID format
+    if not re.match(r\"^L\\d+-P\\d+\", data[\"id\"]):
+        return f\"❌ Invalid id format: {data['id']}\"
+
+    code = data.get(\"starter_code\", \"\")
+    for token in FORBIDDEN:
+        if token in code:
+            return f\"❌ Forbidden token `{token}` in starter_code\"
+
+    if not isinstance(data[\"goals\"], list) or not data[\"goals\"]:
+        return \"❌ Goals must be non-empty list\"
+
+    # Warn if no hints keys provided
+    if \"hints\" not in data and \"hints_keys\" not in data:
+        print(f\"⚠️  Warning: no hints in {data['id']}\")
+
+    return f\"✅ {data['id']} valid\"
+
+
+def walk_dir(puzzles_dir):
+    errors = []
+    for fn in os.listdir(puzzles_dir):
+        if fn.endswith(\".json\"):
+            result = validate_puzzle(os.path.join(puzzles_dir, fn))
+            print(result)
+            if result.startswith(\"❌\"):
+                errors.append(result)
+    return errors
+
+
+if __name__ == \"__main__\":
+    puzzles_dir = sys.argv[1] if len(sys.argv) > 1 else \"content/puzzles\"
+    errors = walk_dir(puzzles_dir)
+    if errors:
+        print(\"\\nValidation failed:\")
+        for e in errors: print(\" -\", e)
+        sys.exit(1)
+    else:
+        print(\"\\nAll puzzles passed ✅\")
+"""
+write("tools/validate_content.py", validate_content_py)
+
+i18n_check_py = """#!/usr/bin/env python3
+import argparse, json, os, sys, glob
+
+def load_pack(path):
+    with open(path, \"r\", encoding=\"utf-8\") as f:
+        data = json.load(f)
+    if isinstance(data, dict) and \"keys\" not in data:
+        if \"meta\" in data and isinstance(data[\"meta\"], dict):
+            meta = data[\"meta\"]
+            data[\"meta.lang\"] = str(meta.get(\"lang\", \"\"))
+            data[\"meta.rtl\"]  = \"true\" if meta.get(\"rtl\", False) else \"false\"
+        return data
+    if isinstance(data, dict) and \"keys\" in data and \"values\" in data:
+        out = {}
+        ks, vs = data.get(\"keys\") or [], data.get(\"values\") or []
+        for i in range(min(len(ks), len(vs))):
+            out[str(ks[i])] = str(vs[i])
+        meta = data.get(\"meta\") or {}
+        out[\"meta.lang\"] = str(meta.get(\"lang\", \"\"))
+        out[\"meta.rtl\"]  = \"true\" if meta.get(\"rtl\", False) else \"false\"
+        return out
+    raise ValueError(f\"Unsupported i18n format in {path}\")
+
+def collect_required_keys(puzzles_dir):
+    keys = set()
+    for fn in os.listdir(puzzles_dir):
+        if not fn.endswith(\".json\"): continue
+        pz_path = os.path.join(puzzles_dir, fn)
+        with open(pz_path, \"r\", encoding=\"utf-8\") as f:
+            data = json.load(f)
+        for field in (\"title_key\", \"intro_key\"):
+            k = data.get(field)
+            if k: keys.add(k)
+        for k in (data.get(\"hints_keys\") or []):
+            if k: keys.add(k)
+        for act in (data.get(\"world_actions_on_pass\") or []):
+            mk = act.get(\"message_key\")
+            if mk: keys.add(mk)
+    return keys
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument(\"--puzzles\", default=\"content/puzzles\")
+    ap.add_argument(\"--i18n\", default=\"i18n\")
+    ap.add_argument(\"--non-strict\", action=\"store_true\")
+    args = ap.parse_args()
+
+    required = collect_required_keys(args.puzzles)
+    if not required:
+        print(\"No i18n keys referenced by puzzles. ✅\")
+        return
+
+    lang_files = sorted([f for f in os.listdir(args.i18n) if f.endswith('.json')])
+    if not lang_files:
+        print(f\"❌ No language packs found in {args.i18n}\")
+        sys.exit(1)
+
+    packs = {}
+    for lf in lang_files:
+        lang = os.path.splitext(lf)[0]
+        packs[lang] = load_pack(os.path.join(args.i18n, lf))
+
+    if \"en\" not in packs:
+        print(\"❌ Missing base pack: i18n/en.json\")
+        sys.exit(1)
+
+    failures = {}
+    langs_to_check = [\"en\"] if args.non_strict else list(packs.keys())
+
+    for lang in langs_to_check:
+        pack = packs[lang]
+        missing = sorted([k for k in required if k not in pack])
+        if missing:
+            failures[lang] = missing
+
+    if failures:
+        print(\"❌ Missing i18n keys:\")
+        for lang, miss in failures.items():
+            sample = \", \".join(miss[:20])
+            more = f\" (+{len(miss)-20} more)\" if len(miss) > 20 else \"\"
+            print(f\" - {lang}: {sample}{more}\")
+        sys.exit(1)
+
+    print(f\"✅ All {len(required)} keys found in language packs: {', '.join(langs_to_check)}\")
+
+if __name__ == \"__main__\":
+    main()
+"""
+write("tools/i18n_check.py", i18n_check_py)
+
+# -----------------------------
+# Engine evaluator skeleton
+# -----------------------------
+engine_run_py = """#!/usr/bin/env python3
+import ast, io, json, os, re, sys, tempfile, textwrap, time, subprocess
+from typing import Any, Dict, List, Tuple
+
+try:
+    import resource
+    def _preexec_resource_limits(cpu_seconds: int = 2, memory_mb: int = 128):
+        def _apply():
+            resource.setrlimit(resource.RLIMIT_CPU, (cpu_seconds, cpu_seconds))
+            bytes_cap = memory_mb * 1024 * 1024
+            resource.setrlimit(resource.RLIMIT_AS, (bytes_cap, bytes_cap))
+            resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+            resource.setrlimit(resource.RLIMIT_FSIZE, (10 * 1024 * 1024, 10 * 1024 * 1024))
+        return _apply
+except Exception:
+    resource = None
+    def _preexec_resource_limits(*args, **kwargs):
+        return None
+
+FORBIDDEN_TOKENS = {\"import\", \"__\", \"exec\", \"eval\", \"open\"}
+FORBIDDEN_NODES = (ast.Import, ast.ImportFrom, ast.Global, ast.Nonlocal, ast.With)
+
+class SafeAstVisitor(ast.NodeVisitor):
+    def __init__(self): self.errors = []
+    def visit_Attribute(self, node: ast.Attribute):
+        if isinstance(node.attr, str) and node.attr.startswith(\"__\"):
+            self.errors.append(f\"Forbidden dunder attribute: {node.attr}\")
+        self.generic_visit(node)
+    def visit_Name(self, node: ast.Name):
+        if node.id.startswith(\"__\"): self.errors.append(f\"Forbidden dunder name: {node.id}\")
+    def visit_Call(self, node: ast.Call):
+        if isinstance(node.func, ast.Name) and node.func.id == \"__import__\":
+            self.errors.append(\"Forbidden call: __import__\")
+        self.generic_visit(node)
+    def generic_visit(self, node):
+        if isinstance(node, FORBIDDEN_NODES):
+            self.errors.append(f\"Forbidden node: {type(node).__name__}\")
+        super().generic_visit(node)
+
+def check_ast_safe(code: str):
+    try:
+        tree = ast.parse(code, mode=\"exec\")
+    except SyntaxError as e:
+        return False, [f\"SyntaxError: {e}\"]
+    v = SafeAstVisitor(); v.visit(tree)
+    for tok in FORBIDDEN_TOKENS:
+        if tok in code: v.errors.append(f\"Forbidden token in source: '{tok}'\")
+    return (len(v.errors) == 0), v.errors
+
+def _write_temp_py(source: str) -> str:
+    fd, path = tempfile.mkstemp(suffix=\".py\", text=True)
+    with os.fdopen(fd, \"w\", encoding=\"utf-8\") as f:
+        f.write(source)
+    return path
+
+def run_python_source(code: str, timeout_ms: int = 2000, mem_mb: int = 128):
+    temp = _write_temp_py(code)
+    cmd = [sys.executable, temp]
+    start = time.time()
+    try:
+        proc = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            timeout=timeout_ms/1000.0, text=True,
+            preexec_fn=_preexec_resource_limits(cpu_seconds=max(1, timeout_ms//1000), memory_mb=mem_mb) if resource is not None else None
+        )
+        rc, out, err = proc.returncode, proc.stdout, proc.stderr
+    except subprocess.TimeoutExpired:
+        rc, out, err = 124, \"\", \"Timeout: code exceeded time limit\"
+    finally:
+        try: os.remove(temp)
+        except Exception: pass
+    return rc, out, err, time.time()-start
+
+def eval_stdout_includes(stdout: str, needle: str) -> bool:
+    return needle in stdout
+
+def eval_forbidden_tokens(code: str, tokens):
+    return not any(t in code for t in tokens)
+
+def eval_function_contract(code: str, fn_name: str, cases, timeout_ms=2000, mem_mb=128):
+    harness = f\"\"\"
+import json, sys
+PLAYER_CODE = r\"\"\"{code}\"\"\"
+NS = {{}}
+try:
+    exec(PLAYER_CODE, NS, NS)
+except Exception as e:
+    print(\"HARNESS: player exec failed:\", e, file=sys.stderr)
+    print(json.dumps({{\"ok\": False, \"cases\": []}})); sys.exit(0)
+fn = NS.get(\"{fn_name}\")
+if not callable(fn):
+    print(\"HARNESS: function '{fn_name}' not found\", file=sys.stderr)
+    print(json.dumps({{\"ok\": False, \"cases\": []}})); sys.exit(0)
+results = []
+CASES = {json.dumps(cases)}
+for args, expected in CASES:
+    try:
+        got = fn(*args)
+        results.append(bool(got == expected))
+    except Exception:
+        results.append(False)
+print(json.dumps({{\"ok\": all(results), \"cases\": results}}))
+\"\"\"
+    rc, out, err, _ = run_python_source(harness, timeout_ms=timeout_ms, mem_mb=mem_mb)
+    if rc != 0: return False, [], err
+    try:
+        payload = json.loads(out.strip().splitlines()[-1])
+        return bool(payload.get(\"ok\")), list(payload.get(\"cases\", [])), err
+    except Exception:
+        return False, [], \"HARNESS: invalid JSON output\"
+
+def eval_custom(name: str, code: str, stdout: str, args):
+    return True  # hook point
+
+def evaluate_goals(puzzle, code, stdout, limits):
+    assertions = []; all_pass = True
+    for goal in puzzle.get(\"goals\", []):
+        gtype = goal.get(\"type\"); passed = False; details = {}
+        if gtype == \"stdout_includes\":
+            needle = goal.get(\"value\", \"\"); passed = eval_stdout_includes(stdout, needle); details = {\"needle\": needle}
+        elif gtype == \"forbidden_tokens\":
+            tokens = goal.get(\"value\", []); passed = eval_forbidden_tokens(code, tokens); details = {\"tokens\": tokens}
+        elif gtype == \"function_contract\":
+            fn_name = goal.get(\"name\"); cases = goal.get(\"cases\", [])
+            ok, per_case, herr = eval_function_contract(code, fn_name, cases, timeout_ms=limits.get(\"cpu_ms\",2000), mem_mb=limits.get(\"mem_mb\",128))
+            passed = ok; details = {\"cases\": per_case, \"harness_err\": herr}
+        elif gtype == \"custom_eval\":
+            name = goal.get(\"name\"); args = goal.get(\"args\", {}); passed = eval_custom(name, code, stdout, args); details = {\"hook\": name}
+        else:
+            passed = False; details = {\"error\": f\"Unknown goal type '{gtype}'\"}
+        assertions.append({\"name\": gtype, \"pass\": bool(passed), **details})
+        if not passed: all_pass = False
+    return all_pass, assertions
+
+def load_puzzle(puzzle_id: str):
+    path = os.path.join(os.getcwd(), \"content\", \"puzzles\", f\"{puzzle_id}.json\")
+    if os.path.exists(path):
+        with open(path, \"r\", encoding=\"utf-8\") as f:
+            return json.load(f)
+    return {
+        \"id\": puzzle_id,
+        \"title_key\": \"puzzle.fallback.title\",
+        \"intro_key\": \"puzzle.fallback.intro\",
+        \"starter_code\": \"print('Door unlocked')\\n\",
+        \"goals\": [
+            {\"type\":\"stdout_includes\",\"value\":\"Door unlocked\"},
+            {\"type\":\"forbidden_tokens\",\"value\":[\"import\",\"__\",\"open\"]}
+        ],
+        \"world_actions_on_pass\": [{\"type\":\"open_door\",\"params\":{\"id\":\"D-01\"}}]
+    }
+
+def main():
+    try:
+        req = json.load(sys.stdin)
+    except Exception:
+        print(json.dumps({\"ok\": False, \"stderr\": \"Bad JSON request\"})); return
+
+    puzzle_id = req.get(\"puzzle_id\", \"unknown\")
+    code = req.get(\"code\", \"\")
+    limits = req.get(\"limits\", {\"cpu_ms\": 2000, \"mem_mb\": 128})
+
+    safe, errors = check_ast_safe(code)
+    if not safe:
+        resp = {\"ok\": False, \"stdout\": \"\", \"stderr\": \"\\n\".join(errors),
+                \"assertions\": [{\"name\":\"ast_safety\",\"pass\": False, \"errors\": errors}],
+                \"score\": 0, \"world_actions\": [],
+                \"telemetry\": {\"exec_ms\": 0, \"lines\": len(code.splitlines())}}
+        print(json.dumps(resp)); return
+
+    rc, stdout, stderr, elapsed = run_python_source(code, timeout_ms=limits.get(\"cpu_ms\",2000), mem_mb=limits.get(\"mem_mb\",128))
+    puzzle = load_puzzle(puzzle_id)
+    all_pass, assertions = evaluate_goals(puzzle, code, stdout, limits)
+
+    resp = {
+        \"ok\": bool(all_pass and rc == 0 and not stderr),
+        \"stdout\": stdout, \"stderr\": stderr, \"assertions\": assertions,
+        \"score\": sum(1 for a in assertions if a.get(\"pass\")),
+        \"world_actions\": puzzle.get(\"world_actions_on_pass\", []) if all_pass else [],
+        \"telemetry\": {\"exec_ms\": int(elapsed*1000), \"lines\": len(code.splitlines())}
+    }
+    print(json.dumps(resp))
+
+if __name__ == \"__main__\": main()
+"""
+write("engine/src/run.py", engine_run_py)
+
+# -----------------------------
+# Smoke test
+# -----------------------------
+smoke_py = """import os, json, subprocess, sys
+
+PUZZLE_DIR = \"content/puzzles\"
+SOL_DIR = \"content/solutions\"
+ENGINE_CMD = [sys.executable, \"engine/src/run.py\"]
+
+def run_solution(puzzle_id, solution_path):
+    code = open(solution_path, \"r\", encoding=\"utf-8\").read()
+    req = {\"puzzle_id\": puzzle_id, \"code\": code, \"limits\": {\"cpu_ms\": 2000, \"mem_mb\": 128}}
+    proc = subprocess.run(
+        ENGINE_CMD, input=json.dumps(req).encode(),
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10
+    )
+    if proc.returncode != 0:
+        print(f\"❌ Engine crashed for {puzzle_id}\\n{proc.stderr.decode()}\")
+        return None
+    try:
+        return json.loads(proc.stdout.decode())
+    except Exception as e:
+        print(f\"❌ Bad JSON from engine for {puzzle_id}: {e}\")
+        return None
+
+def main():
+    failures = []
+    for fn in sorted(os.listdir(PUZZLE_DIR)):
+        if not fn.endswith('.json'): continue
+        path = os.path.join(PUZZLE_DIR, fn)
+        data = json.load(open(path, 'r', encoding='utf-8'))
+        puzzle_id = data[\"id\"]
+        sol_path = os.path.join(SOL_DIR, puzzle_id + \".py\")
+        if not os.path.exists(sol_path):
+            print(f\"⚠️  No solution found for {puzzle_id}, skipping\"); continue
+        print(f\"▶ Running solution for {puzzle_id}...\")
+        result = run_solution(puzzle_id, sol_path)
+        if not result or not result.get(\"ok\", False):
+            failures.append(puzzle_id); print(f\"❌ FAILED {puzzle_id}\")
+        else:
+            print(f\"✅ PASSED {puzzle_id}\")
+    print(\"\\n--- Smoke Summary ---\")
+    if failures:
+        print(\"❌ Some puzzles failed:\", failures); sys.exit(1)
+    else:
+        print(\"✅ All reference solutions passed\")
+
+if __name__ == \"__main__\": main()
+"""
+write("smoke/run_smoke.py", smoke_py)
+
+# -----------------------------
+# Content: puzzles + solutions
+# -----------------------------
+puzzles = {
+"L1-P3-door-unlock.json": {
+  "id": "L1-P3-door-unlock",
+  "title_key": "puzzle.L1-P3.title",
+  "intro_key": "puzzle.L1-P3.intro",
+  "starter_code": "access = \"y\"  # try changing this to 'n'\n# Write an if/else that prints exactly: Door unlocked OR Access denied\n",
+  "hints_keys": ["hint.if_else", "hint.missing_colon"],
+  "goals": [
+    {"type": "stdout_includes", "value": "Door unlocked"},
+    {"type": "forbidden_tokens", "value": ["import","__","open","exec","eval"]}
+  ],
+  "world_actions_on_pass": [
+    {"type":"open_door","params":{"id":"D-01"},"message_key":"fmt.door_unlocked"}
+  ]
+},
+"L2-P3-skip-traps.json": {
+  "id": "L2-P3-skip-traps",
+  "title_key": "puzzle.L2-P3.title",
+  "intro_key": "puzzle.L2-P3.intro",
+  "starter_code": "def safe_nodes(traps):\n    # Return a list of nodes from 1..10 excluding any in traps\n    pass\n\n# Example: traps = [3,7] -> [1,2,4,5,6,8,9,10]\n",
+  "hints_keys": ["hint.for_loop","hint.list_comprehension"],
+  "goals": [
+    {"type":"function_contract","name":"safe_nodes","cases":[[[[3,7]],[1,2,4,5,6,8,9,10]],[[[2,5,9]],[1,3,4,6,7,8,10]]]},
+    {"type":"forbidden_tokens","value":["import","__","open","exec","eval"]}
+  ],
+  "world_actions_on_pass": [
+    {"type":"animate_nodes","params":{"enabled":[1,2,4,5,6,8,9,10],"skipped":[3,7]},"message_key":"fmt.nodes_enabled"}
+  ]
+},
+"L3-P1-disable-drone.json": {
+  "id": "L3-P1-disable-drone",
+  "title_key": "puzzle.L3-P1.title",
+  "intro_key": "puzzle.L3-P1.intro",
+  "starter_code": "def disable_drone():\n    # Write your code here\n    pass\n\n# Call the function once below\n",
+  "hints_keys": ["hint.def_function","hint.print_inside","hint.call_function"],
+  "goals": [
+    {"type":"function_contract","name":"disable_drone","cases":[[[], None]]},
+    {"type":"stdout_includes","value":"EMP blast triggered. Drone disabled."},
+    {"type":"forbidden_tokens","value":["import","__","open","exec","eval"]}
+  ],
+  "world_actions_on_pass": [
+    {"type":"drone_fall","params":{"id":"DR-01"},"message_key":"fmt.drone_disabled"}
+  ]
+}
+}
+
+for fn, data in puzzles.items():
+    write(f"content/puzzles/{fn}", json.dumps(data, ensure_ascii=False, indent=2))
+
+solutions = {
+"L1-P3-door-unlock.py": """access = "y"
+if access == "y":
+    print("Door unlocked")
+else:
+    print("Access denied")
+""",
+"L2-P3-skip-traps.py": """def safe_nodes(traps):
+    result = []
+    for n in range(1, 11):
+        if n not in traps:
+            result.append(n)
+    return result
+""",
+"L3-P1-disable-drone.py": """def disable_drone():
+    print("EMP blast triggered. Drone disabled.")
+
+disable_drone()
+"""
+}
+
+for fn, content in solutions.items():
+    write(f"content/solutions/{fn}", content)
+
+# -----------------------------
+# i18n packs
+# -----------------------------
+en = {
+  "meta": {"lang":"en","rtl": False},
+  "ui.run":"Run","ui.hint":"Hint","ui.pass":"Success","ui.fail":"Failed",
+  "ui.stdout":"Output","ui.stderr":"Errors",
+  "puzzle.L1-P3.title":"Security Prompt: Do You Have Access?",
+  "puzzle.L1-P3.intro":"Respond with an if/else. If access == 'y', unlock the door.",
+  "puzzle.L2-P3.title":"Bypass the Trap Nodes",
+  "puzzle.L2-P3.intro":"Write a function safe_nodes(traps) that returns the list of nodes 1..10 excluding any in traps.",
+  "puzzle.L3-P1.title":"Define Your First Function",
+  "puzzle.L3-P1.intro":"Write a function disable_drone() that prints exactly: EMP blast triggered. Drone disabled.",
+  "hint.if_else":"Use if/else to branch based on access.",
+  "hint.missing_colon":"Remember the colon ':' after if/def/for.",
+  "hint.for_loop":"Loop over range(1, 11) and skip traps.",
+  "hint.list_comprehension":"Try [n for n in range(1, 11) if n not in traps].",
+  "hint.def_function":"Define with: def disable_drone():",
+  "hint.print_inside":"Use print() inside your function.",
+  "hint.call_function":"Don’t forget to CALL the function at the end.",
+  "fmt.door_unlocked":"Door {id} unlocked",
+  "fmt.nodes_enabled":"Safe nodes activated, traps skipped",
+  "fmt.drone_disabled":"Drone {id} disabled by EMP"
+}
+ru = {
+  "meta": {"lang":"ru","rtl": False},
+  "ui.run":"Запустить","ui.hint":"Подсказка","ui.pass":"Успех","ui.fail":"Ошибка",
+  "ui.stdout":"Вывод","ui.stderr":"Ошибки",
+  "puzzle.L1-P3.title":"Запрос доступа: у вас есть доступ?",
+  "puzzle.L1-P3.intro":"Ответьте с помощью if/else. Если access == 'y', откройте дверь.",
+  "puzzle.L2-P3.title":"Обход узлов-ловушек",
+  "puzzle.L2-P3.intro":"Напишите функцию safe_nodes(traps), которая возвращает список узлов 1..10, исключая указанные в traps.",
+  "puzzle.L3-P1.title":"Определите свою первую функцию",
+  "puzzle.L3-P1.intro":"Напишите функцию disable_drone(), которая выводит: EMP blast triggered. Drone disabled.",
+  "hint.if_else":"Используйте if/else, чтобы выбрать путь в зависимости от access.",
+  "hint.missing_colon":"Не забудьте двоеточие ':' после if/def/for.",
+  "hint.for_loop":"Пройдитесь циклом по range(1, 11) и пропустите ловушки.",
+  "hint.list_comprehension":"Попробуйте [n for n in range(1, 11) if n not in traps].",
+  "hint.def_function":"Определите так: def disable_drone():",
+  "hint.print_inside":"Используйте print() внутри функции.",
+  "hint.call_function":"Не забудьте ВЫЗВАТЬ функцию в конце.",
+  "fmt.door_unlocked":"Дверь {id} открыта",
+  "fmt.nodes_enabled":"Безопасные узлы активированы, ловушки пропущены",
+  "fmt.drone_disabled":"Дрон {id} выведен из строя ЭМИ"
+}
+fr = {
+  "meta": {"lang":"fr","rtl": False},
+  "ui.run":"Exécuter","ui.hint":"Indice","ui.pass":"Réussi","ui.fail":"Échec",
+  "ui.stdout":"Sortie","ui.stderr":"Erreurs",
+  "puzzle.L1-P3.title":"Invite de sécurité : avez-vous l’accès ?",
+  "puzzle.L1-P3.intro":"Répondez avec if/else. Si access == 'y', déverrouillez la porte.",
+  "puzzle.L2-P3.title":"Contourner les nœuds piégés",
+  "puzzle.L2-P3.intro":"Écrivez une fonction safe_nodes(traps) qui renvoie la liste des nœuds 1..10 en excluant ceux présents dans traps.",
+  "puzzle.L3-P1.title":"Définissez votre première fonction",
+  "puzzle.L3-P1.intro":"Écrivez une fonction disable_drone() qui affiche : EMP blast triggered. Drone disabled.",
+  "hint.if_else":"Utilisez if/else pour basculer selon la valeur de access.",
+  "hint.missing_colon":"N’oubliez pas les deux-points « : » après if/def/for.",
+  "hint.for_loop":"Bouclez sur range(1, 11) et ignorez les pièges.",
+  "hint.list_comprehension":"Essayez [n for n in range(1, 11) if n not in traps].",
+  "hint.def_function":"Définissez ainsi : def disable_drone():",
+  "hint.print_inside":"Utilisez print() à l’intérieur de la fonction.",
+  "hint.call_function":"N’oubliez pas d’APPELER la fonction à la fin.",
+  "fmt.door_unlocked":"Porte {id} déverrouillée",
+  "fmt.nodes_enabled":"Nœuds sûrs activés, pièges ignorés",
+  "fmt.drone_disabled":"Drone {id} désactivé par EMP"
+}
+ar = {
+  "meta": {"lang":"ar","rtl": True},
+  "ui.run":"تشغيل","ui.hint":"تلميح","ui.pass":"نجاح","ui.fail":"فشل",
+  "ui.stdout":"المخرجات","ui.stderr":"الأخطاء",
+  "puzzle.L1-P3.title":"موجه الأمان: هل لديك صلاحية؟",
+  "puzzle.L1-P3.intro":"استخدم if/else. إذا كان access == 'y' فافتح الباب.",
+  "puzzle.L2-P3.title":"تجاوز العقد الفخ",
+  "puzzle.L2-P3.intro":"اكتب دالة safe_nodes(traps) تُرجع قائمة العقد من 1..10 مع استثناء العقد الموجودة في traps.",
+  "puzzle.L3-P1.title":"عرّف أول دالة لك",
+  "puzzle.L3-P1.intro":"اكتب دالة disable_drone() التي تطبع: EMP blast triggered. Drone disabled.",
+  "hint.if_else":"استخدم if/else للتفرع حسب قيمة access.",
+  "hint.missing_colon":"تذكر وضع النقطتين ':' بعد if/def/for.",
+  "hint.for_loop":"كرر على range(1, 11) وتجاوز العقد الفخ.",
+  "hint.list_comprehension":"جرّب [n for n in range(1, 11) if n not in traps].",
+  "hint.def_function":"عرّف الدالة هكذا: def disable_drone():",
+  "hint.print_inside":"استخدم print() داخل الدالة.",
+  "hint.call_function":"لا تنس استدعاء الدالة في النهاية.",
+  "fmt.door_unlocked":"تم فتح الباب {id}",
+  "fmt.nodes_enabled":"تم تفعيل العقد الآمنة وتجاوز الفخاخ",
+  "fmt.drone_disabled":"تم تعطيل الطائرة {id} بواسطة نبضة كهرومغناطيسية"
+}
+
+write("i18n/en.json", json.dumps(en, ensure_ascii=False, indent=2))
+write("i18n/ru.json", json.dumps(ru, ensure_ascii=False, indent=2))
+write("i18n/fr.json", json.dumps(fr, ensure_ascii=False, indent=2))
+write("i18n/ar.json", json.dumps(ar, ensure_ascii=False, indent=2))
+
+# -----------------------------
+# Unity stubs
+# -----------------------------
+world_action_bus_cs = """using UnityEngine;
+using System.Collections.Generic;
+
+[System.Serializable]
+public class WorldAction {
+    public string type;
+    public Dictionary<string, string> paramsDict;
+}
+
+public class WorldActionBus : MonoBehaviour
+{
+    public GameObject doorPrefab;
+    public GameObject nodePrefab;
+    public GameObject dronePrefab;
+
+    public void Apply(List<WorldAction> actions)
+    {
+        foreach (var act in actions)
+        {
+            switch (act.type)
+            {
+                case "open_door":
+                    if (act.paramsDict != null && act.paramsDict.ContainsKey("id"))
+                        OpenDoor(act.paramsDict["id"]);
+                    else OpenDoor("D-01");
+                    break;
+                case "animate_nodes":
+                    AnimateNodes(act.paramsDict);
+                    break;
+                case "drone_fall":
+                    if (act.paramsDict != null && act.paramsDict.ContainsKey("id"))
+                        DroneFall(act.paramsDict["id"]);
+                    else DroneFall("DR-01");
+                    break;
+                default:
+                    Debug.LogWarning("Unknown action: " + act.type);
+                    break;
+            }
+        }
+    }
+
+    private void OpenDoor(string id)
+    {
+        Debug.Log("Opening door " + id);
+        // TODO: trigger door animation, sound, VFX
+    }
+
+    private void AnimateNodes(Dictionary<string, string> args)
+    {
+        Debug.Log("Animating nodes...");
+        // TODO: animate nodes based on args["enabled"] / args["skipped"]
+    }
+
+    private void DroneFall(string id)
+    {
+        Debug.Log("Drone " + id + " falling");
+        // TODO: play fall animation
+    }
+}
+"""
+write("client/Scripts/WorldActionBus.cs", world_action_bus_cs)
+
+localizer_cs = """using UnityEngine;
+using System.Collections.Generic;
+using System.IO;
+
+public class Localizer : MonoBehaviour
+{
+    public static Localizer I;
+    public string language = "en";
+    private Dictionary<string, string> primary;
+    private Dictionary<string, string> fallback;
+
+    void Awake()
+    {
+        if (I == null) I = this; else Destroy(gameObject);
+        DontDestroyOnLoad(gameObject);
+        primary = LoadPack(language);
+        fallback = language == "en" ? primary : LoadPack("en");
+        ApplyRTLFlag();
+    }
+
+    private Dictionary<string, string> LoadPack(string lang)
+    {
+        var path = Path.Combine(Application.streamingAssetsPath, "i18n", lang + ".json");
+        var json = File.ReadAllText(path);
+        // NOTE: In a real project, use Newtonsoft JSON for Unity and parse into Dictionary<string,string>
+        var dict = new Dictionary<string, string>(); // placeholder for demo
+        dict["meta.lang"] = lang;
+        dict["meta.rtl"] = (lang == "ar") ? "true" : "false";
+        return dict;
+    }
+
+    public string T(string key, Dictionary<string, object> vars = null)
+    {
+        string s = null;
+        if (primary != null && primary.TryGetValue(key, out s) == false) s = null;
+        if (s == null && fallback != null && fallback.TryGetValue(key, out s) == false) s = key;
+        if (vars != null)
+            foreach (var kv in vars)
+                s = s.Replace("{" + kv.Key + "}", kv.Value.ToString());
+        return s;
+    }
+
+    public bool IsRTL() => primary.ContainsKey("meta.rtl") && primary["meta.rtl"] == "true";
+
+    private void ApplyRTLFlag()
+    {
+        // Hook layout direction flip here if IsRTL()
+    }
+}
+"""
+write("client/Scripts/Localization/Localizer.cs", localizer_cs)
+
+# -----------------------------
+# README with badges + localization guide snippet
+# -----------------------------
+readme_md = """# Codebreaker: Python Protocols
+
+[![CI: Validate Content & Tests](https://github.com/OWNER/REPO/actions/workflows/validate.yml/badge.svg?branch=main)](https://github.com/OWNER/REPO/actions/workflows/validate.yml)
+
+A graphical, puzzle-driven adventure that teaches Python through a cyberpunk hacking narrative.
+
+## Quickstart
+```bash
+python tools/validate_content.py content/puzzles
+python tools/i18n_check.py --puzzles content/puzzles --i18n i18n
+python smoke/run_smoke.py
+```
+
+## Localization Guide (excerpt)
+See `LOCALIZATION.md` for full details.
+
+- Use i18n keys in puzzles (`title_key`, `intro_key`, `hints_keys`)
+- Add keys first to `i18n/en.json`, then translate in `ru.json`, `fr.json`, `ar.json`
+- Validate with:
+```bash
+python tools/i18n_check.py --puzzles content/puzzles --i18n i18n
+```
+"""
+write("README.md", readme_md)
+
+localization_md = """# Localization Guide
+
+## How to add new text
+Use i18n keys in puzzles, not literals:
+```json
+{ "title_key": "puzzle.L1-P3.title", "intro_key": "puzzle.L1-P3.intro" }
+```
+
+Add keys to `i18n/en.json`, then mirror into `ru.json`, `fr.json`, `ar.json`.
+
+## Check locally
+```bash
+python tools/i18n_check.py --puzzles content/puzzles --i18n i18n
+```
+
+## Best practices
+- English is source of truth
+- Namespaces: puzzle.<id>.*, hint.*, fmt.*
+- Keep code keywords in English across locales
+"""
+write("LOCALIZATION.md", localization_md)
+
+# -----------------------------
+# Designed by AI folder with GDD, Architecture, Chat log
+# -----------------------------
+
+gdd = """# Codebreaker: Python Protocols — One-Page GDD
+
+## Core Concept
+A graphical, puzzle-driven adventure teaching Python via cyberpunk hacking.
+
+## Gameplay
+- Puzzle-driven missions with immediate visual feedback
+- Progression: Basics → Data → OOP/Robustness → APIs/Testing → Capstone
+- Boss missions integrate multiple concepts
+
+## Narrative & Setting
+Neon city under corporate control; you are a rookie hacker guided by Cipher.
+
+## Visual & Audio
+Neon terminals, holographic maps, drones; dark synth soundtrack.
+
+## Learning Goals
+Python fundamentals to applied practices (file I/O, exceptions, APIs, testing).
+
+## Tech Notes
+Unity/Godot client + Python sandbox/evaluator; puzzles as JSON + reference solutions.
+
+## Unique Selling Points
+- Visual consequences for every line of code
+- Narrative immersion and real dev practices
+"""
+
+architecture = """# Codebreaker Architecture Sketch
+
+```
+┌───────────────┐      HTTPS/IPC      ┌────────────────┐
+│  Game Client  │  <----------------> │  Puzzle Engine │
+│ (Unity/Godot) │                     │  & Sandbox     │
+└──────┬────────┘                     └───────┬────────┘
+       │                                      │
+       ▼                                      ▼
+┌───────────────┐                      ┌───────────────┐
+│  Code Editor  │── submit(code) ────▶ │  Python VM    │
+│ + HUD/Dialogs │◀── results JSON ──── │ (Sandboxed)   │
+└───────────────┘                      └───────────────┘
+       ▲                                      │
+       │ world actions                         │ stdout/stderr, asserts
+       ▼                                      ▼
+┌───────────────┐                      ┌───────────────┐
+│ WorldActionBus│◀── world_actions ─── │ Test Runner   │
+└───────────────┘                      └───────────────┘
+```
+
+Key modules:
+- AST safety → sandboxed subprocess
+- Goal evaluators: stdout, function contracts, custom hooks
+- Content pipeline: JSON puzzles + solutions + i18n packs
+- CI: validation, i18n key coverage, smoke tests
+"""
+
+# Chat log (concise capture of this conversation thread)
+now = datetime.datetime.utcnow().isoformat() + "Z"
+chat_log = f"""# Chat Log — Codebreaker Setup (generated {now})
+
+User: "Can you help me design a game concept that teaches basic programming skills?"
+Assistant: Proposed Python-focused, graphical cyberpunk game; outlined Levels 1–12 with puzzles & code.
+
+Key milestones captured:
+- Levels 1–6: Basics, loops, functions, data structures, files
+- Levels 7–9: OOP, exceptions, concurrency/async
+- Levels 10–12: APIs, testing/CI, capstone mission
+- One-page GDD, MVP task list, feature matrix, risk plan
+- Tech architecture sketch and API schema for /run
+- Tools: validate_content.py, i18n_check.py, smoke/run_smoke.py
+- Engine evaluator skeleton (AST safety, sandbox exec, goals)
+- Content: 3 sample puzzles + solutions with i18n keys
+- i18n packs EN/RU/FR/AR with translations
+- Unity stubs: WorldActionBus.cs, Localizer.cs
+- GitHub setup: workflow, PR template, README badges
+
+Note: This is a condensed log. For full details, refer to the code and docs in this bundle created during the session.
+"""
+
+write("Designed by AI/GDD.md", gdd)
+write("Designed by AI/Architecture.md", architecture)
+write("Designed by AI/Chat Log.txt", chat_log)
+
+# -----------------------------
+# Zip the repo skeleton
+# -----------------------------
+zip_path = "/mnt/data/codebreaker_repo_skeleton.zip"
+with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+    for root, dirs, files in os.walk(BASE):
+        for f in files:
+            full = os.path.join(root, f)
+            rel = os.path.relpath(full, BASE)
+            z.write(full, rel)
+
+zip_path

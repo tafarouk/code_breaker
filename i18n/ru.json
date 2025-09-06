@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "lang": "ru",
+    "rtl": false
+  },
+  "ui.run": "Запустить",
+  "ui.hint": "Подсказка",
+  "ui.pass": "Успех",
+  "ui.fail": "Ошибка",
+  "ui.stdout": "Вывод",
+  "ui.stderr": "Ошибки",
+  "puzzle.L1-P3.title": "Запрос доступа: у вас есть доступ?",
+  "puzzle.L1-P3.intro": "Ответьте с помощью if/else. Если access == 'y', откройте дверь.",
+  "puzzle.L2-P3.title": "Обход узлов-ловушек",
+  "puzzle.L2-P3.intro": "Напишите функцию safe_nodes(traps), которая возвращает список узлов 1..10, исключая указанные в traps.",
+  "puzzle.L3-P1.title": "Определите свою первую функцию",
+  "puzzle.L3-P1.intro": "Напишите функцию disable_drone(), которая выводит: EMP blast triggered. Drone disabled.",
+  "hint.if_else": "Используйте if/else, чтобы выбрать путь в зависимости от access.",
+  "hint.missing_colon": "Не забудьте двоеточие ':' после if/def/for.",
+  "hint.for_loop": "Пройдитесь циклом по range(1, 11) и пропустите ловушки.",
+  "hint.list_comprehension": "Попробуйте [n for n in range(1, 11) if n not in traps].",
+  "hint.def_function": "Определите так: def disable_drone():",
+  "hint.print_inside": "Используйте print() внутри функции.",
+  "hint.call_function": "Не забудьте ВЫЗВАТЬ функцию в конце.",
+  "fmt.door_unlocked": "Дверь {id} открыта",
+  "fmt.nodes_enabled": "Безопасные узлы активированы, ловушки пропущены",
+  "fmt.drone_disabled": "Дрон {id} выведен из строя ЭМИ"
+}

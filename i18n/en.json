@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "lang": "en",
+    "rtl": false
+  },
+  "ui.run": "Run",
+  "ui.hint": "Hint",
+  "ui.pass": "Success",
+  "ui.fail": "Failed",
+  "ui.stdout": "Output",
+  "ui.stderr": "Errors",
+  "puzzle.L1-P3.title": "Security Prompt: Do You Have Access?",
+  "puzzle.L1-P3.intro": "Respond with an if/else. If access == 'y', unlock the door.",
+  "puzzle.L2-P3.title": "Bypass the Trap Nodes",
+  "puzzle.L2-P3.intro": "Write a function safe_nodes(traps) that returns the list of nodes 1..10 excluding any in traps.",
+  "puzzle.L3-P1.title": "Define Your First Function",
+  "puzzle.L3-P1.intro": "Write a function disable_drone() that prints exactly: EMP blast triggered. Drone disabled.",
+  "hint.if_else": "Use if/else to branch based on access.",
+  "hint.missing_colon": "Remember the colon ':' after if/def/for.",
+  "hint.for_loop": "Loop over range(1, 11) and skip traps.",
+  "hint.list_comprehension": "Try [n for n in range(1, 11) if n not in traps].",
+  "hint.def_function": "Define with: def disable_drone():",
+  "hint.print_inside": "Use print() inside your function.",
+  "hint.call_function": "Don’t forget to CALL the function at the end.",
+  "fmt.door_unlocked": "Door {id} unlocked",
+  "fmt.nodes_enabled": "Safe nodes activated, traps skipped",
+  "fmt.drone_disabled": "Drone {id} disabled by EMP"
+}

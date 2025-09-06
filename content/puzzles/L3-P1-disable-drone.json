@@ -1,0 +1,46 @@
+{
+  "id": "L3-P1-disable-drone",
+  "title_key": "puzzle.L3-P1.title",
+  "intro_key": "puzzle.L3-P1.intro",
+  "starter_code": "def disable_drone():\n    # Write your code here\n    pass\n\n# Call the function once below\n",
+  "hints_keys": [
+    "hint.def_function",
+    "hint.print_inside",
+    "hint.call_function"
+  ],
+  "goals": [
+    {
+      "type": "function_contract",
+      "name": "disable_drone",
+      "cases": [
+        [
+          [],
+          null
+        ]
+      ]
+    },
+    {
+      "type": "stdout_includes",
+      "value": "EMP blast triggered. Drone disabled."
+    },
+    {
+      "type": "forbidden_tokens",
+      "value": [
+        "import",
+        "__",
+        "open",
+        "exec",
+        "eval"
+      ]
+    }
+  ],
+  "world_actions_on_pass": [
+    {
+      "type": "drone_fall",
+      "params": {
+        "id": "DR-01"
+      },
+      "message_key": "fmt.drone_disabled"
+    }
+  ]
+}

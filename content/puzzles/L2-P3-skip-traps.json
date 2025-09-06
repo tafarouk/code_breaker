@@ -1,0 +1,86 @@
+{
+  "id": "L2-P3-skip-traps",
+  "title_key": "puzzle.L2-P3.title",
+  "intro_key": "puzzle.L2-P3.intro",
+  "starter_code": "def safe_nodes(traps):\n    # Return a list of nodes from 1..10 excluding any in traps\n    pass\n\n# Example: traps = [3,7] -> [1,2,4,5,6,8,9,10]\n",
+  "hints_keys": [
+    "hint.for_loop",
+    "hint.list_comprehension"
+  ],
+  "goals": [
+    {
+      "type": "function_contract",
+      "name": "safe_nodes",
+      "cases": [
+        [
+          [
+            [
+              3,
+              7
+            ]
+          ],
+          [
+            1,
+            2,
+            4,
+            5,
+            6,
+            8,
+            9,
+            10
+          ]
+        ],
+        [
+          [
+            [
+              2,
+              5,
+              9
+            ]
+          ],
+          [
+            1,
+            3,
+            4,
+            6,
+            7,
+            8,
+            10
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "forbidden_tokens",
+      "value": [
+        "import",
+        "__",
+        "open",
+        "exec",
+        "eval"
+      ]
+    }
+  ],
+  "world_actions_on_pass": [
+    {
+      "type": "animate_nodes",
+      "params": {
+        "enabled": [
+          1,
+          2,
+          4,
+          5,
+          6,
+          8,
+          9,
+          10
+        ],
+        "skipped": [
+          3,
+          7
+        ]
+      },
+      "message_key": "fmt.nodes_enabled"
+    }
+  ]
+}
