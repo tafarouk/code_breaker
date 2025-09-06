@@ -15,6 +15,8 @@
   "puzzle.L2-P3.intro": "Напишите функцию safe_nodes(traps), которая возвращает список узлов 1..10, исключая указанные в traps.",
   "puzzle.L3-P1.title": "Определите свою первую функцию",
   "puzzle.L3-P1.intro": "Напишите функцию disable_drone(), которая выводит: EMP blast triggered. Drone disabled.",
+  "puzzle.L3-BOSS.title": "Босс: Очистить сигнал",
+  "puzzle.L3-BOSS.intro": "Напишите clean_signal(s), которая оставляет только буквы/цифры/пробелы, схлопывает лишние пробелы и возвращает ВЕРХНИЙ РЕГИСТР.",
   "hint.if_else": "Используйте if/else, чтобы выбрать путь в зависимости от access.",
   "hint.missing_colon": "Не забудьте двоеточие ':' после if/def/for.",
   "hint.for_loop": "Пройдитесь циклом по range(1, 11) и пропустите ловушки.",
@@ -35,5 +37,10 @@
   "hint.range": "Используйте range(1, 6), чтобы включить 5.",
   "hint.print_format": "Используйте print(f\"Node {n} disabled\").",
   "hint.params": "Определите параметры функции: def fn(a, b):",
-  "hint.return_value": "Возвращайте значение через 'return', не печатайте."
+  "hint.return_value": "Возвращайте значение через 'return', не печатайте.",
+  "hint.str_methods": "Методы строк: .isalnum(), .split(), .join(), .upper().",
+  "hint.collapse_spaces": "Используйте \" \".join(s.split()), чтобы схлопнуть пробелы.",
+  "hint.upper": "Используйте s.upper() для верхнего регистра.",
+  "hint.isalnum": "Фильтруйте символы через ch.isalnum() или ch == ' '."
+
 }

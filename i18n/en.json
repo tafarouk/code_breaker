@@ -15,6 +15,8 @@
   "puzzle.L2-P3.intro": "Write a function safe_nodes(traps) that returns the list of nodes 1..10 excluding any in traps.",
   "puzzle.L3-P1.title": "Define Your First Function",
   "puzzle.L3-P1.intro": "Write a function disable_drone() that prints exactly: EMP blast triggered. Drone disabled.",
+  "puzzle.L3-BOSS.title": "Boss: Clean the Signal",
+  "puzzle.L3-BOSS.intro": "Write clean_signal(s) that keeps only letters/digits/spaces, collapses extra spaces, and returns UPPERCASE.",
   "hint.if_else": "Use if/else to branch based on access.",
   "hint.missing_colon": "Remember the colon ':' after if/def/for.",
   "hint.for_loop": "Loop over range(1, 11) and skip traps.",
@@ -35,5 +37,10 @@
   "hint.range": "Use range(1, 6) to include 5.",
   "hint.print_format": "Use print(f\"Node {n} disabled\").",
   "hint.params": "Define function parameters: def fn(a, b):",
-  "hint.return_value": "Return a value with 'return', don’t print."
+  "hint.return_value": "Return a value with 'return', don’t print.",
+  "hint.str_methods": "String helpers: .isalnum(), .split(), .join(), .upper().",
+  "hint.collapse_spaces": "Use \" \".join(s.split()) to collapse multiple spaces.",
+  "hint.upper": "Use s.upper() for uppercase.",
+  "hint.isalnum": "Filter characters with ch.isalnum() or ch == ' '."
+
 }

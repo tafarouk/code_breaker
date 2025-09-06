@@ -15,6 +15,8 @@
   "puzzle.L2-P3.intro": "Écrivez une fonction safe_nodes(traps) qui renvoie la liste des nœuds 1..10 en excluant ceux présents dans traps.",
   "puzzle.L3-P1.title": "Définissez votre première fonction",
   "puzzle.L3-P1.intro": "Écrivez une fonction disable_drone() qui affiche : EMP blast triggered. Drone disabled.",
+  "puzzle.L3-BOSS.title": "Boss: Nettoyer le signal",
+  "puzzle.L3-BOSS.intro": "Écrivez clean_signal(s) qui conserve uniquement les lettres/chiffres/espaces, réduit les espaces supplémentaires et renvoie en MAJUSCULE.",
   "hint.if_else": "Utilisez if/else pour basculer selon la valeur de access.",
   "hint.missing_colon": "N’oubliez pas les deux-points « : » après if/def/for.",
   "hint.for_loop": "Bouclez sur range(1, 11) et ignorez les pièges.",
@@ -35,5 +37,10 @@
   "hint.range": "Utilisez range(1, 6) pour inclure 5.",
   "hint.print_format": "Utilisez print(f\"Node {n} disabled\").",
   "hint.params": "Définissez des paramètres de fonction : def fn(a, b):",
-  "hint.return_value": "Renvoyez une valeur avec 'return', ne faites pas print."
+  "hint.return_value": "Renvoyez une valeur avec 'return', ne faites pas print.",
+  "hint.str_methods": "Méthodes de chaîne : .isalnum(), .split(), .join(), .upper().",
+  "hint.collapse_spaces": "Utilisez \" \".join(s.split()) pour réduire les espaces.",
+  "hint.upper": "Utilisez s.upper() pour majuscule.",
+  "hint.isalnum": "Filtrez les caractères avec ch.isalnum() ou ch == ' '."
+
 }

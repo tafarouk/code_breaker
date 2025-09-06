@@ -32,8 +32,14 @@
   "puzzle.L3-P2.intro": "اكتب amplify(msg, times) التي تُرجع msg مكررة بعدد times دون مسافات.",
   "puzzle.L3-P3.title": "نقِّ إشارة الزعيم",
   "puzzle.L3-P3.intro": "اكتب clean_signal(signal) التي تعيد فقط الحروف من signal مع إزالة أي محارف أخرى.",
+  "puzzle.L3-BOSS.title": "الزعيم: تنقية الإشارة",
+  "puzzle.L3-BOSS.intro": "اكتب clean_signal(s) بحيث تبقي الحروف/الأرقام/المسافات فقط، وتدمج المسافات الزائدة، وتُعيد النص بأحرف كبيرة.",
   "hint.range": "استخدم range(1, 6) لتشمل 5.",
   "hint.print_format": "استخدم print(f\"Node {n} disabled\").",
   "hint.params": "عرّف معاملات الدالة: def fn(a, b):",
-  "hint.return_value": "أعد القيمة باستخدام 'return' ولا تستخدم الطباعة."
+  "hint.return_value": "أعد القيمة باستخدام 'return' ولا تستخدم الطباعة.",
+  "hint.str_methods": "دوال السلاسل: .isalnum() و .split() و .join() و .upper().",
+  "hint.collapse_spaces": "استخدم \" \".join(s.split()) لدمج المسافات المتتالية.",
+  "hint.upper": "استخدم s.upper() لتحويل الأحرف إلى كبيرة.",
+  "hint.isalnum": "رشّح المحارف بـ ch.isalnum() أو ch == ' '."
 }

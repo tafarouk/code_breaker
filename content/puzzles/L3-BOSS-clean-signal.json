@@ -1,0 +1,24 @@
+{
+    "id": "L3-BOSS-clean-signal",
+    "title_key": "puzzle.L3-BOSS.title",
+    "intro_key": "puzzle.L3-BOSS.intro",
+    "starter_code": "def clean_signal(s):\n    \"\"\"Return s normalized: keep only letters/digits/spaces, collapse multiple spaces to one, and UPPERCASE the result.\"\"\"\n    # your code here (no imports)\n    pass\n\n# You can test locally:\n# print(clean_signal(\"emp!!  launch-@ 7 \"))\n",
+    "hints_keys": ["hint.str_methods", "hint.collapse_spaces", "hint.upper", "hint.isalnum"],
+    "goals": [
+      {
+        "type": "function_contract",
+        "name": "clean_signal",
+        "cases": [
+          [["emp!!  launch-@ 7 "], "EMP LAUNCH 7"],
+          [["  move  north!!!  "], "MOVE NORTH"],
+          [["reboot__  now  "], "REBOOT NOW"],
+          [["code-9  ok?"], "CODE 9 OK"]
+        ]
+      },
+      { "type": "forbidden_tokens", "value": ["import", "__", "open", "exec", "eval"] }
+    ],
+    "world_actions_on_pass": [
+      { "type": "open_door", "params": { "id": "D-03" }, "message_key": "fmt.door_unlocked" }
+    ]
+  }
+  
