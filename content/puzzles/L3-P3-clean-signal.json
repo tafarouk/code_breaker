@@ -1,0 +1,49 @@
+{
+  "id": "L3-P3-clean-signal",
+  "title_key": "puzzle.L3-P3.title",
+  "intro_key": "puzzle.L3-P3.intro",
+  "starter_code": "def clean_signal(signal):\n    # Return only letters from signal\n    pass\n\n# You can test:\n# print(clean_signal('h3llo!'))\n",
+  "hints_keys": [
+    "hint.def_function",
+    "hint.params",
+    "hint.return_value",
+    "hint.for_loop"
+  ],
+  "goals": [
+    {
+      "type": "function_contract",
+      "name": "clean_signal",
+      "cases": [
+        [
+          ["h3ll0!"],
+          "hll"
+        ],
+        [
+          ["45--"],
+          ""
+        ],
+        [
+          ["Clean!"],
+          "Clean"
+        ]
+      ]
+    },
+    {
+      "type": "forbidden_tokens",
+      "value": [
+        "import",
+        "__",
+        "open",
+        "exec",
+        "eval"
+      ]
+    }
+  ],
+  "world_actions_on_pass": [
+    {
+      "type": "broadcast_signal",
+      "params": {"id": "SIG-03"},
+      "message_key": "fmt.signal_cleaned"
+    }
+  ]
+}
