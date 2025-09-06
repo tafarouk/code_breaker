@@ -24,5 +24,13 @@
   "hint.call_function": "Не забудьте ВЫЗВАТЬ функцию в конце.",
   "fmt.door_unlocked": "Дверь {id} открыта",
   "fmt.nodes_enabled": "Безопасные узлы активированы, ловушки пропущены",
-  "fmt.drone_disabled": "Дрон {id} выведен из строя ЭМИ"
+  "fmt.drone_disabled": "Дрон {id} выведен из строя ЭМИ",
+  "puzzle.L2-P1.title": "Сканирование узлов",
+  "puzzle.L2-P1.intro": "Используйте цикл for, чтобы отключить узлы 1–5 (печать: 'Node X disabled').",
+  "puzzle.L3-P2.title": "Усильте сигнал",
+  "puzzle.L3-P2.intro": "Напишите amplify(msg, times), возвращающую msg, повторённую times раз без пробелов.",
+  "hint.range": "Используйте range(1, 6), чтобы включить 5.",
+  "hint.print_format": "Используйте print(f\"Node {n} disabled\").",
+  "hint.params": "Определите параметры функции: def fn(a, b):",
+  "hint.return_value": "Возвращайте значение через 'return', не печатайте."
 }

@@ -1,0 +1,59 @@
+{
+  "id": "L3-P2-amplify-message",
+  "title_key": "puzzle.L3-P2.title",
+  "intro_key": "puzzle.L3-P2.intro",
+  "starter_code": "def amplify(msg, times):\n    # Return msg repeated times (no spaces)\n    # Example: amplify('hi', 3) -> 'hihihi'\n    pass\n\n# You can test:\n# print(amplify('ok', 2))\n",
+  "hints_keys": [
+    "hint.def_function",
+    "hint.params",
+    "hint.return_value"
+  ],
+  "goals": [
+    {
+      "type": "function_contract",
+      "name": "amplify",
+      "cases": [
+        [
+          [
+            "hi",
+            3
+          ],
+          "hihihi"
+        ],
+        [
+          [
+            "x",
+            1
+          ],
+          "x"
+        ],
+        [
+          [
+            "ab",
+            0
+          ],
+          ""
+        ]
+      ]
+    },
+    {
+      "type": "forbidden_tokens",
+      "value": [
+        "import",
+        "__",
+        "open",
+        "exec",
+        "eval"
+      ]
+    }
+  ],
+  "world_actions_on_pass": [
+    {
+      "type": "open_door",
+      "params": {
+        "id": "D-02"
+      },
+      "message_key": "fmt.door_unlocked"
+    }
+  ]
+}

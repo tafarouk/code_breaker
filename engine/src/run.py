@@ -80,28 +80,28 @@ def eval_forbidden_tokens(code: str, tokens):
 
 def eval_function_contract(code: str, fn_name: str, cases, timeout_ms=2000, mem_mb=128):
     harness = f"""
-import json, sys
-PLAYER_CODE = r"""{code}"""
-NS = {{}}
-try:
-    exec(PLAYER_CODE, NS, NS)
-except Exception as e:
-    print("HARNESS: player exec failed:", e, file=sys.stderr)
-    print(json.dumps({{"ok": False, "cases": []}})); sys.exit(0)
-fn = NS.get("{fn_name}")
-if not callable(fn):
-    print("HARNESS: function '{fn_name}' not found", file=sys.stderr)
-    print(json.dumps({{"ok": False, "cases": []}})); sys.exit(0)
-results = []
-CASES = {json.dumps(cases)}
-for args, expected in CASES:
+    import json, sys
+    PLAYER_CODE = r"{code}"
+    NS = {{}}
     try:
-        got = fn(*args)
-        results.append(bool(got == expected))
-    except Exception:
-        results.append(False)
-print(json.dumps({{"ok": all(results), "cases": results}}))
-"""
+        exec(PLAYER_CODE, NS, NS)
+    except Exception as e:
+        print("HARNESS: player exec failed:", e, file=sys.stderr)
+        print(json.dumps({{"ok": False, "cases": []}})); sys.exit(0)
+    fn = NS.get("{fn_name}")
+    if not callable(fn):
+        print("HARNESS: function '{fn_name}' not found", file=sys.stderr)
+        print(json.dumps({{"ok": False, "cases": []}})); sys.exit(0)
+    results = []
+    CASES = {json.dumps(cases)}
+    for args, expected in CASES:
+        try:
+            got = fn(*args)
+            results.append(bool(got == expected))
+        except Exception:
+            results.append(False)
+    print(json.dumps({{"ok": all(results), "cases": results}}))
+    """
     rc, out, err, _ = run_python_source(harness, timeout_ms=timeout_ms, mem_mb=mem_mb)
     if rc != 0: return False, [], err
     try:

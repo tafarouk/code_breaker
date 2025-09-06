@@ -24,5 +24,13 @@
   "hint.call_function": "Don’t forget to CALL the function at the end.",
   "fmt.door_unlocked": "Door {id} unlocked",
   "fmt.nodes_enabled": "Safe nodes activated, traps skipped",
-  "fmt.drone_disabled": "Drone {id} disabled by EMP"
+  "fmt.drone_disabled": "Drone {id} disabled by EMP",
+  "puzzle.L2-P1.title": "Node Sweep",
+  "puzzle.L2-P1.intro": "Use a for-loop to disable nodes 1 through 5 (print: 'Node X disabled').",
+  "puzzle.L3-P2.title": "Amplify the Signal",
+  "puzzle.L3-P2.intro": "Write amplify(msg, times) that returns msg repeated times with no spaces.",
+  "hint.range": "Use range(1, 6) to include 5.",
+  "hint.print_format": "Use print(f\"Node {n} disabled\").",
+  "hint.params": "Define function parameters: def fn(a, b):",
+  "hint.return_value": "Return a value with 'return', don’t print."
 }

@@ -1,0 +1,46 @@
+{
+  "id": "L2-P1-node-sweep",
+  "title_key": "puzzle.L2-P1.title",
+  "intro_key": "puzzle.L2-P1.intro",
+  "starter_code": "## Disable nodes 1 through 5 (inclusive)\n# Print exactly: Node X disabled\n# Example: Node 1 disabled\n\nfor n in range(1, 6):\n    # your code here\n    pass\n",
+  "hints_keys": [
+    "hint.for_loop",
+    "hint.range",
+    "hint.print_format"
+  ],
+  "goals": [
+    {
+      "type": "stdout_includes",
+      "value": "Node 1 disabled"
+    },
+    {
+      "type": "stdout_includes",
+      "value": "Node 5 disabled"
+    },
+    {
+      "type": "forbidden_tokens",
+      "value": [
+        "import",
+        "__",
+        "open",
+        "exec",
+        "eval"
+      ]
+    }
+  ],
+  "world_actions_on_pass": [
+    {
+      "type": "animate_nodes",
+      "params": {
+        "enabled": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "message_key": "fmt.nodes_enabled"
+    }
+  ]
+}

@@ -24,5 +24,13 @@
   "hint.call_function": "لا تنس استدعاء الدالة في النهاية.",
   "fmt.door_unlocked": "تم فتح الباب {id}",
   "fmt.nodes_enabled": "تم تفعيل العقد الآمنة وتجاوز الفخاخ",
-  "fmt.drone_disabled": "تم تعطيل الطائرة {id} بواسطة نبضة كهرومغناطيسية"
+  "fmt.drone_disabled": "تم تعطيل الطائرة {id} بواسطة نبضة كهرومغناطيسية",
+  "puzzle.L2-P1.title": "مسح العقد",
+  "puzzle.L2-P1.intro": "استخدم حلقة for لتعطيل العقد من 1 إلى 5 (اطبع: 'Node X disabled').",
+  "puzzle.L3-P2.title": "تضخيم الإشارة",
+  "puzzle.L3-P2.intro": "اكتب amplify(msg, times) التي تُرجع msg مكررة بعدد times دون مسافات.",
+  "hint.range": "استخدم range(1, 6) لتشمل 5.",
+  "hint.print_format": "استخدم print(f\"Node {n} disabled\").",
+  "hint.params": "عرّف معاملات الدالة: def fn(a, b):",
+  "hint.return_value": "أعد القيمة باستخدام 'return' ولا تستخدم الطباعة."
 }
